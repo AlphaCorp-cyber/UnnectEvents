@@ -25,7 +25,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/events', async (req, res) => {
     try {
       const category = req.query.category as string;
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const events = await storage.getEvents(userId, category);
       res.json(events);
     } catch (error) {
@@ -37,7 +37,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/events/:id', async (req, res) => {
     try {
       const eventId = parseInt(req.params.id);
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       const event = await storage.getEvent(eventId, userId);
       if (!event) {
         return res.status(404).json({ message: "Event not found" });

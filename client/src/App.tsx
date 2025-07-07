@@ -11,6 +11,8 @@ import EventDetails from "@/pages/event-details";
 import CreateEvent from "@/pages/create-event";
 import MyEvents from "@/pages/my-events";
 import Profile from "@/pages/profile";
+import SavedEvents from "@/pages/saved-events";
+import SearchPage from "@/pages/search";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -26,6 +28,8 @@ function Router() {
           <Route path="/create-event" component={CreateEvent} />
           <Route path="/my-events" component={MyEvents} />
           <Route path="/profile" component={Profile} />
+          <Route path="/saved-events" component={SavedEvents} />
+          <Route path="/search" component={SearchPage} />
         </>
       )}
       <Route component={NotFound} />

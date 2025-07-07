@@ -63,7 +63,7 @@ export class DatabaseStorage implements IStorage {
 
   // Event operations
   async getEvents(userId?: string, category?: string): Promise<EventWithDetails[]> {
-    const baseQuery = db
+    let query = db
       .select({
         id: events.id,
         title: events.title,
@@ -86,12 +86,14 @@ export class DatabaseStorage implements IStorage {
       .groupBy(events.id, users.id)
       .orderBy(desc(events.date));
 
-    let query = baseQuery;
     if (category && category !== "all") {
       query = query.where(eq(events.category, category));
     }
 
     const results = await query;
+
+    // Filter out events without organizers
+    const validResults = results.filter(result => result.organizer);
 
     // If userId is provided, get user's RSVP status and saved status
     if (userId) {
@@ -108,14 +110,18 @@ export class DatabaseStorage implements IStorage {
       const rsvpMap = new Map(userRsvps.map(r => [r.eventId, r.status]));
       const savedMap = new Set(userSavedEvents.map(s => s.eventId));
 
-      return results.map(result => ({
+      return validResults.map(result => ({
         ...result,
+        organizer: result.organizer!,
         userRsvpStatus: rsvpMap.get(result.id),
         isSaved: savedMap.has(result.id),
-      }));
+      })) as EventWithDetails[];
     }
 
-    return results;
+    return validResults.map(result => ({
+      ...result,
+      organizer: result.organizer!,
+    })) as EventWithDetails[];
   }
 
   async getEvent(id: number, userId?: string): Promise<EventWithDetails | undefined> {
