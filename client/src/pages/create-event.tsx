@@ -33,6 +33,7 @@ export default function CreateEvent() {
 
   const [calculatedPrice, setCalculatedPrice] = useState<number>(0);
   const [priceBreakdown, setPriceBreakdown] = useState<any[]>([]);
+  const [paymentSettings, setPaymentSettings] = useState<{ isPaidVersion: boolean } | null>(null);
 
   const form = useForm<CreateEventForm>({
     resolver: zodResolver(createEventSchema),
@@ -53,10 +54,33 @@ export default function CreateEvent() {
   const watchedDays = form.watch("days");
 
   useEffect(() => {
-    if (watchedDays && watchedDays > 0) {
-      calculatePrice(watchedDays);
-    }
-  }, [watchedDays]);
+    // Load payment settings to check if paid mode is enabled
+    const loadPaymentSettings = async () => {
+      try {
+        const response = await fetch('/api/admin/payment-settings');
+        if (response.ok) {
+          const settings = await response.json();
+          setPaymentSettings(settings);
+        }
+      } catch (error) {
+        console.error('Error loading payment settings:', error);
+      }
+    };
+    loadPaymentSettings();
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (watchedDays && watchedDays >= 1 && paymentSettings?.isPaidVersion) {
+        calculatePrice(watchedDays);
+      } else {
+        setCalculatedPrice(0);
+        setPriceBreakdown([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [watchedDays, paymentSettings]);
 
   const calculatePrice = async (days: number) => {
     try {
@@ -80,7 +104,7 @@ export default function CreateEvent() {
       // Combine date and time
       const { date, time, ...eventData } = data;
       const dateTime = new Date(`${date}T${time}`);
-      
+
       await apiRequest("POST", "/api/events", {
         ...eventData,
         date: dateTime.toISOString(),
@@ -318,22 +342,24 @@ export default function CreateEvent() {
                   />
 
                   {/* Price Display */}
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">Total Price:</span>
-                      <span className="text-lg font-bold text-primary">${calculatedPrice.toFixed(2)}</span>
-                    </div>
-                    {priceBreakdown.length > 0 && (
-                      <div className="space-y-1">
-                        {priceBreakdown.map((item, index) => (
-                          <div key={index} className="flex justify-between text-xs text-gray-600">
-                            <span>{item.quantity}x {item.packageName}</span>
-                            <span>${item.price.toFixed(2)}</span>
-                          </div>
-                        ))}
+                  {paymentSettings?.isPaidVersion && (
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">Total Price:</span>
+                        <span className="text-lg font-bold text-primary">${calculatedPrice.toFixed(2)}</span>
                       </div>
-                    )}
-                  </div>
+                      {priceBreakdown.length > 0 && (
+                        <div className="space-y-1">
+                          {priceBreakdown.map((item, index) => (
+                            <div key={index} className="flex justify-between text-xs text-gray-600">
+                              <span>{item.quantity}x {item.packageName}</span>
+                              <span>${item.price.toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <FormField
                     control={form.control}

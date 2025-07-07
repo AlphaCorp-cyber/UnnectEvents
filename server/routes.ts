@@ -319,7 +319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/payment-settings', isAdmin, async (req, res) => {
+  app.get('/api/admin/payment-settings', async (req, res) => {
     try {
       const settings = await storage.getPaymentSettings();
       if (!settings) {
