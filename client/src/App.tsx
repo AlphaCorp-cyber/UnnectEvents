@@ -22,6 +22,7 @@ function Router() {
 
   return (
     <Switch>
+      <Route path="/admin-setup" component={AdminSetup} />
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
@@ -34,7 +35,6 @@ function Router() {
           <Route path="/saved-events" component={SavedEvents} />
           <Route path="/search" component={SearchPage} />
           <Route path="/admin" component={AdminDashboard} />
-          <Route path="/admin-setup" component={AdminSetup} />
         </>
       )}
       <Route component={NotFound} />
