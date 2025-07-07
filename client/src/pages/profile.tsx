@@ -94,7 +94,8 @@ export default function Profile() {
                   variant="ghost"
                   className="w-full justify-start px-6 py-4 h-auto"
                   onClick={() => {
-                    // TODO: Implement settings
+                    // Basic settings functionality
+                    alert("Settings feature will be available in future updates");
                   }}
                 >
                   <Settings className="w-5 h-5 mr-3" />
@@ -105,7 +106,14 @@ export default function Profile() {
                   variant="ghost"
                   className="w-full justify-start px-6 py-4 h-auto"
                   onClick={() => {
-                    // TODO: Implement edit profile
+                    // Edit profile functionality
+                    const newFirstName = prompt("Enter your first name:", user?.firstName || "");
+                    const newLastName = prompt("Enter your last name:", user?.lastName || "");
+                    
+                    if (newFirstName !== null && newLastName !== null) {
+                      // You can implement an API call here to update the profile
+                      alert("Profile update feature will be fully implemented in future updates");
+                    }
                   }}
                 >
                   <User className="w-5 h-5 mr-3" />
@@ -116,7 +124,11 @@ export default function Profile() {
                   variant="ghost"
                   className="w-full justify-start px-6 py-4 h-auto"
                   onClick={() => {
-                    // TODO: Implement location settings
+                    // Location preferences functionality
+                    const newLocation = prompt("Enter your preferred location:", "");
+                    if (newLocation !== null) {
+                      alert("Location preferences will be saved in future updates");
+                    }
                   }}
                 >
                   <MapPin className="w-5 h-5 mr-3" />

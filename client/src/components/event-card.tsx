@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Calendar, MapPin, Bookmark, BookmarkIcon } from "lucide-react";
+import { Calendar, MapPin, Bookmark, BookmarkIcon, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
@@ -149,20 +149,9 @@ export default function EventCard({ event, variant = "compact", onClick }: Event
             <span>{event.city || event.location}</span>
           </div>
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="flex -space-x-2">
-                {/* Mock attendee avatars */}
-                <Avatar className="w-6 h-6 border-2 border-white">
-                  <AvatarFallback className="text-xs">A</AvatarFallback>
-                </Avatar>
-                <Avatar className="w-6 h-6 border-2 border-white">
-                  <AvatarFallback className="text-xs">B</AvatarFallback>
-                </Avatar>
-                <Avatar className="w-6 h-6 border-2 border-white">
-                  <AvatarFallback className="text-xs">C</AvatarFallback>
-                </Avatar>
-              </div>
-              <span className="ml-2 text-xs text-gray-500">+{event.attendeeCount} going</span>
+            <div className="flex items-center space-x-1">
+              <Users className="w-3 h-3 text-gray-400" />
+              <span className="text-xs text-gray-500">{event.attendeeCount} going</span>
             </div>
             <Button
               size="sm"

@@ -16,29 +16,27 @@ export default function SavedEvents() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
-  const { data: events, isLoading, error } = useQuery<EventWithDetails[]>({
+  const { data: events, isLoading } = useQuery<EventWithDetails[]>({
     queryKey: ["/api/saved-events"],
-  });
-
-  // Handle errors
-  if (error && !isLoading) {
-    if (isUnauthorizedError(error)) {
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
       toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
+        title: "Error",
+        description: "Failed to load saved events",
         variant: "destructive",
       });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return null;
-    }
-    toast({
-      title: "Error",
-      description: "Failed to load saved events",
-      variant: "destructive",
-    });
-  }
+    },
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-background">

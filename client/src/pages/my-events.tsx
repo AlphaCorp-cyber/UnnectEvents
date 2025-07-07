@@ -145,11 +145,7 @@ export default function MyEvents() {
                           className="px-3"
                           onClick={(e) => {
                             e.stopPropagation();
-                            // TODO: Implement edit functionality
-                            toast({
-                              title: "Coming Soon",
-                              description: "Edit functionality will be available soon",
-                            });
+                            setLocation(`/edit-event/${event.id}`);
                           }}
                         >
                           <Edit className="w-3 h-3" />
@@ -158,13 +154,27 @@ export default function MyEvents() {
                           variant="outline"
                           size="sm"
                           className="px-3 text-destructive border-destructive hover:bg-destructive hover:text-white"
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            // TODO: Implement delete functionality
-                            toast({
-                              title: "Coming Soon",
-                              description: "Delete functionality will be available soon",
-                            });
+                            if (confirm("Are you sure you want to delete this event? This action cannot be undone.")) {
+                              try {
+                                await fetch(`/api/events/${event.id}`, {
+                                  method: 'DELETE',
+                                  credentials: 'include'
+                                });
+                                toast({
+                                  title: "Success",
+                                  description: "Event deleted successfully",
+                                });
+                                window.location.reload();
+                              } catch (error) {
+                                toast({
+                                  title: "Error",
+                                  description: "Failed to delete event",
+                                  variant: "destructive",
+                                });
+                              }
+                            }
                           }}
                         >
                           <Trash2 className="w-3 h-3" />

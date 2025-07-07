@@ -10,6 +10,7 @@ import Landing from "@/pages/landing";
 import Home from "@/pages/home";
 import EventDetails from "@/pages/event-details";
 import CreateEvent from "@/pages/create-event";
+import EditEvent from "@/pages/edit-event";
 import MyEvents from "@/pages/my-events";
 import Profile from "@/pages/profile";
 import SavedEvents from "@/pages/saved-events";
@@ -30,6 +31,7 @@ function Router() {
           <Route path="/" component={Home} />
           <Route path="/event/:id" component={EventDetails} />
           <Route path="/create-event" component={CreateEvent} />
+          <Route path="/edit-event/:id" component={EditEvent} />
           <Route path="/my-events" component={MyEvents} />
           <Route path="/profile" component={Profile} />
           <Route path="/saved-events" component={SavedEvents} />
