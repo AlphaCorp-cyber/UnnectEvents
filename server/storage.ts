@@ -15,8 +15,9 @@ import { db } from "./db";
 import { eq, desc, sql, and, count } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations (mandatory for Replit Auth)
+  // User operations
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
 
   // Event operations
@@ -46,6 +47,11 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
   async upsertUser(userData: UpsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
@@ -63,7 +69,7 @@ export class DatabaseStorage implements IStorage {
 
   // Event operations
   async getEvents(userId?: string, category?: string): Promise<EventWithDetails[]> {
-    let query = db
+    let baseQuery = db
       .select({
         id: events.id,
         title: events.title,
@@ -86,14 +92,15 @@ export class DatabaseStorage implements IStorage {
       .groupBy(events.id, users.id)
       .orderBy(desc(events.date));
 
+    let results;
     if (category && category !== "all") {
-      query = query.where(eq(events.category, category));
+      results = await baseQuery.where(eq(events.category, category));
+    } else {
+      results = await baseQuery;
     }
 
-    const results = await query;
-
-    // Filter out events without organizers
-    const validResults = results.filter(result => result.organizer);
+    // Filter out events without organizers and ensure non-null organizers
+    const validResults = results.filter(result => result.organizer !== null) as (typeof results[0] & { organizer: NonNullable<typeof results[0]['organizer']> })[];
 
     // If userId is provided, get user's RSVP status and saved status
     if (userId) {

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./auth";
 import { insertEventSchema, insertRsvpSchema, insertSavedEventSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -12,8 +12,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const user = req.user;
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -25,7 +24,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/events', async (req, res) => {
     try {
       const category = req.query.category as string;
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       const events = await storage.getEvents(userId, category);
       res.json(events);
     } catch (error) {
@@ -37,7 +36,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/events/:id', async (req, res) => {
     try {
       const eventId = parseInt(req.params.id);
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       const event = await storage.getEvent(eventId, userId);
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
@@ -53,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const eventData = insertEventSchema.parse({
         ...req.body,
-        organizerId: req.user.claims.sub,
+        organizerId: req.user.id,
       });
       const event = await storage.createEvent(eventData);
       res.json(event);
@@ -69,7 +68,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/events/:id', isAuthenticated, async (req: any, res) => {
     try {
       const eventId = parseInt(req.params.id);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       // Check if user owns the event
       const existingEvent = await storage.getEvent(eventId);
@@ -92,7 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/events/:id', isAuthenticated, async (req: any, res) => {
     try {
       const eventId = parseInt(req.params.id);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       // Check if user owns the event
       const existingEvent = await storage.getEvent(eventId);
@@ -111,7 +110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User events
   app.get('/api/my-events', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const events = await storage.getUserEvents(userId);
       res.json(events);
     } catch (error) {
@@ -124,7 +123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/events/:id/rsvp', isAuthenticated, async (req: any, res) => {
     try {
       const eventId = parseInt(req.params.id);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { status } = req.body;
 
       const rsvpData = insertRsvpSchema.parse({
@@ -147,7 +146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/events/:id/rsvp', isAuthenticated, async (req: any, res) => {
     try {
       const eventId = parseInt(req.params.id);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       await storage.deleteRsvp(eventId, userId);
       res.json({ message: "RSVP removed successfully" });
     } catch (error) {
@@ -159,7 +158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User RSVPs
   app.get('/api/my-rsvps', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const events = await storage.getUserRsvps(userId);
       res.json(events);
     } catch (error) {
@@ -172,7 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/events/:id/save', isAuthenticated, async (req: any, res) => {
     try {
       const eventId = parseInt(req.params.id);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
 
       const savedEventData = insertSavedEventSchema.parse({
         eventId,
@@ -193,7 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/events/:id/save', isAuthenticated, async (req: any, res) => {
     try {
       const eventId = parseInt(req.params.id);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       await storage.unsaveEvent(eventId, userId);
       res.json({ message: "Event unsaved successfully" });
     } catch (error) {
@@ -205,7 +204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User saved events
   app.get('/api/saved-events', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const events = await storage.getUserSavedEvents(userId);
       res.json(events);
     } catch (error) {

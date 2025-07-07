@@ -58,6 +58,7 @@ export default function SearchPage() {
     { value: "art", label: "🎨 Art" },
     { value: "food", label: "🍕 Food" },
     { value: "tech", label: "💻 Tech" },
+    { value: "church", label: "⛪ Church" },
   ];
 
   const filterEvents = (): EventWithDetails[] => {

@@ -16,6 +16,7 @@ export default function CategoryFilter({ selectedCategory, onCategoryChange }: C
     { value: "art", label: "🎨 Art" },
     { value: "food", label: "🍕 Food" },
     { value: "tech", label: "💻 Tech" },
+    { value: "church", label: "⛪ Church" },
   ];
 
   return (
