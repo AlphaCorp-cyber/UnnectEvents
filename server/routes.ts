@@ -2,8 +2,22 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
-import { insertEventSchema, insertRsvpSchema, insertSavedEventSchema } from "@shared/schema";
+import { insertEventSchema, insertRsvpSchema, insertSavedEventSchema, insertAdminSettingSchema, insertPaymentSettingSchema } from "@shared/schema";
 import { z } from "zod";
+
+// Admin middleware
+const isAdmin = async (req: any, res: any, next: any) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  
+  const user = req.user;
+  if (!user.isAdmin) {
+    return res.status(403).json({ message: "Admin access required" });
+  }
+  
+  next();
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -212,6 +226,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching saved events:", error);
       res.status(500).json({ message: "Failed to fetch saved events" });
+    }
+  });
+
+  // Admin routes
+  app.get('/api/admin/settings', isAdmin, async (req, res) => {
+    try {
+      const settings = await storage.getAllAdminSettings();
+      // Don't return sensitive values in the response
+      const safeSetting = settings.map(setting => ({
+        ...setting,
+        value: setting.isEncrypted ? '[ENCRYPTED]' : setting.value
+      }));
+      res.json(safeSetting);
+    } catch (error) {
+      console.error("Error fetching admin settings:", error);
+      res.status(500).json({ message: "Failed to fetch admin settings" });
+    }
+  });
+
+  app.post('/api/admin/settings', isAdmin, async (req: any, res) => {
+    try {
+      const { key, value, isEncrypted } = req.body;
+      
+      const settingData = insertAdminSettingSchema.parse({
+        key,
+        value,
+        isEncrypted: isEncrypted || false
+      });
+
+      const setting = await storage.setAdminSetting(settingData);
+      res.json({
+        ...setting,
+        value: setting.isEncrypted ? '[ENCRYPTED]' : setting.value
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid setting data", errors: error.errors });
+      }
+      console.error("Error saving admin setting:", error);
+      res.status(500).json({ message: "Failed to save admin setting" });
+    }
+  });
+
+  app.get('/api/admin/payment-settings', isAdmin, async (req, res) => {
+    try {
+      const settings = await storage.getPaymentSettings();
+      if (!settings) {
+        return res.json({
+          isPaidVersion: false,
+          eventPostingPrice: "0",
+          paynowMerchantId: "",
+          paynowIntegrationId: "",
+          paynowIntegrationKey: ""
+        });
+      }
+      
+      res.json({
+        ...settings,
+        paynowIntegrationKey: settings.paynowIntegrationKey ? '[ENCRYPTED]' : ''
+      });
+    } catch (error) {
+      console.error("Error fetching payment settings:", error);
+      res.status(500).json({ message: "Failed to fetch payment settings" });
+    }
+  });
+
+  app.post('/api/admin/payment-settings', isAdmin, async (req: any, res) => {
+    try {
+      const paymentData = insertPaymentSettingSchema.parse(req.body);
+      const settings = await storage.updatePaymentSettings(paymentData);
+      
+      res.json({
+        ...settings,
+        paynowIntegrationKey: settings.paynowIntegrationKey ? '[ENCRYPTED]' : ''
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid payment settings", errors: error.errors });
+      }
+      console.error("Error updating payment settings:", error);
+      res.status(500).json({ message: "Failed to update payment settings" });
     }
   });
 

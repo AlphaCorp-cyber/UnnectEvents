@@ -3,6 +3,8 @@ import {
   events,
   rsvps,
   savedEvents,
+  adminSettings,
+  paymentSettings,
   type User,
   type UpsertUser,
   type Event,
@@ -10,6 +12,10 @@ import {
   type InsertRsvp,
   type InsertSavedEvent,
   type EventWithDetails,
+  type AdminSetting,
+  type InsertAdminSetting,
+  type PaymentSetting,
+  type InsertPaymentSetting,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, count } from "drizzle-orm";
@@ -38,6 +44,15 @@ export interface IStorage {
   saveEvent(savedEvent: InsertSavedEvent): Promise<void>;
   unsaveEvent(eventId: number, userId: string): Promise<void>;
   getUserSavedEvents(userId: string): Promise<EventWithDetails[]>;
+
+  // Admin settings operations
+  getAdminSetting(key: string): Promise<AdminSetting | undefined>;
+  setAdminSetting(setting: InsertAdminSetting): Promise<AdminSetting>;
+  getAllAdminSettings(): Promise<AdminSetting[]>;
+
+  // Payment settings operations
+  getPaymentSettings(): Promise<PaymentSetting | undefined>;
+  updatePaymentSettings(settings: Partial<InsertPaymentSetting>): Promise<PaymentSetting>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -314,6 +329,70 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(events.date));
 
     return results;
+  }
+
+  // Admin settings operations
+  async getAdminSetting(key: string): Promise<AdminSetting | undefined> {
+    const [setting] = await db
+      .select()
+      .from(adminSettings)
+      .where(eq(adminSettings.key, key));
+    return setting || undefined;
+  }
+
+  async setAdminSetting(setting: InsertAdminSetting): Promise<AdminSetting> {
+    const [existingSetting] = await db
+      .select()
+      .from(adminSettings)
+      .where(eq(adminSettings.key, setting.key));
+
+    if (existingSetting) {
+      const [updated] = await db
+        .update(adminSettings)
+        .set({ value: setting.value, updatedAt: new Date() })
+        .where(eq(adminSettings.key, setting.key))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(adminSettings)
+        .values(setting)
+        .returning();
+      return created;
+    }
+  }
+
+  async getAllAdminSettings(): Promise<AdminSetting[]> {
+    return await db.select().from(adminSettings);
+  }
+
+  // Payment settings operations
+  async getPaymentSettings(): Promise<PaymentSetting | undefined> {
+    const [settings] = await db
+      .select()
+      .from(paymentSettings)
+      .where(eq(paymentSettings.isActive, true))
+      .orderBy(desc(paymentSettings.createdAt));
+    return settings || undefined;
+  }
+
+  async updatePaymentSettings(settings: Partial<InsertPaymentSetting>): Promise<PaymentSetting> {
+    const existingSettings = await this.getPaymentSettings();
+
+    if (existingSettings) {
+      const [updated] = await db
+        .update(paymentSettings)
+        .set({ ...settings, updatedAt: new Date() })
+        .where(eq(paymentSettings.id, existingSettings.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(paymentSettings)
+        .values(settings as InsertPaymentSetting)
+        .returning();
+      return created;
+    }
   }
 }
 

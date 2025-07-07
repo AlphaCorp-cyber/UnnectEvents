@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Search, Bell, Calendar } from "lucide-react";
+import { ArrowLeft, Search, Bell, Calendar, Shield } from "lucide-react";
 import { useLocation } from "wouter";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import type { User } from "@shared/schema";
@@ -69,6 +69,17 @@ export default function Header({ showBackButton = false, title }: HeaderProps) {
               >
                 <Search className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </Button>
+              {typedUser?.isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full"
+                  onClick={() => setLocation("/admin")}
+                  title="Admin Dashboard"
+                >
+                  <Shield className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                </Button>
+              )}
               <ThemeToggle />
             </>
           )}

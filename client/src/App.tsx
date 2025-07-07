@@ -14,6 +14,7 @@ import MyEvents from "@/pages/my-events";
 import Profile from "@/pages/profile";
 import SavedEvents from "@/pages/saved-events";
 import SearchPage from "@/pages/search";
+import AdminDashboard from "@/pages/admin-dashboard";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -31,6 +32,7 @@ function Router() {
           <Route path="/profile" component={Profile} />
           <Route path="/saved-events" component={SavedEvents} />
           <Route path="/search" component={SearchPage} />
+          <Route path="/admin" component={AdminDashboard} />
         </>
       )}
       <Route component={NotFound} />
