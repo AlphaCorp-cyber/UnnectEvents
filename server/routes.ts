@@ -70,13 +70,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Creating event with body:", req.body);
       const { days, ...otherData } = req.body;
       
-      // Calculate price based on days
+      // Calculate price based on days (default to free if no packages)
       const pricing = await storage.calculateOptimalPrice(days || 1);
       
       const dataToValidate = {
         ...otherData,
         days: days || 1,
-        price: pricing.totalPrice.toString(),
+        price: pricing.totalPrice > 0 ? pricing.totalPrice.toString() : "0",
         organizerId: req.user.id,
       };
       
