@@ -15,6 +15,7 @@ import Profile from "@/pages/profile";
 import SavedEvents from "@/pages/saved-events";
 import SearchPage from "@/pages/search";
 import AdminDashboard from "@/pages/admin-dashboard";
+import AdminSetup from "@/pages/admin-setup";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -33,6 +34,7 @@ function Router() {
           <Route path="/saved-events" component={SavedEvents} />
           <Route path="/search" component={SearchPage} />
           <Route path="/admin" component={AdminDashboard} />
+          <Route path="/admin-setup" component={AdminSetup} />
         </>
       )}
       <Route component={NotFound} />

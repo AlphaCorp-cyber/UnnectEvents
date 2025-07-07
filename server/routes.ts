@@ -229,6 +229,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create admin credentials route (temporary - remove after use)
+  app.post('/api/create-admin', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        // Update existing user to be admin
+        await storage.updateUser(existingUser.id, { isAdmin: true });
+        return res.json({ message: "User updated to admin successfully", email });
+      }
+      
+      // Hash password
+      const bcrypt = require('bcrypt');
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      // Create new admin user
+      const adminUser = await storage.upsertUser({
+        id: `local_admin_${Date.now()}`,
+        email,
+        firstName: "Admin",
+        lastName: "User",
+        profileImageUrl: null,
+        passwordHash,
+        isAdmin: true,
+      });
+      
+      res.json({ 
+        message: "Admin user created successfully", 
+        email: adminUser.email
+      });
+    } catch (error) {
+      console.error("Error creating admin:", error);
+      res.status(500).json({ message: "Failed to create admin user" });
+    }
+  });
+
   // Admin routes
   app.get('/api/admin/settings', isAdmin, async (req, res) => {
     try {
