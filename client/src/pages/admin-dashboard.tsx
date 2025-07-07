@@ -332,20 +332,11 @@ export default function AdminDashboard() {
                   />
                 </div>
 
-                {/* Pricing */}
-                <div>
-                  <Label htmlFor="eventPrice">Event Posting Price (USD)</Label>
-                  <Input
-                    id="eventPrice"
-                    type="number"
-                    step="0.01"
-                    value={paymentSettings.eventPostingPrice}
-                    onChange={(e) => 
-                      setPaymentSettings(prev => ({ ...prev, eventPostingPrice: e.target.value }))
-                    }
-                    placeholder="0.00"
-                    disabled={!paymentSettings.isPaidVersion}
-                  />
+                {/* Note about pricing */}
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    <strong>Note:</strong> Event posting prices are now automatically calculated based on the listing packages you've configured. Users select the number of days for their event listing, and the system calculates the optimal price using your package combinations.
+                  </p>
                 </div>
 
                 {/* Paynow Settings */}

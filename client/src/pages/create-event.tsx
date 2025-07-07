@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { z } from "zod";
-import { ArrowLeft, Calendar, MapPin, Users, DollarSign, Tag, FileText } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Clock, Tag, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,7 +19,8 @@ import { insertEventSchema } from "@shared/schema";
 const createEventSchema = insertEventSchema.extend({
   date: z.string().min(1, "Date is required"),
   time: z.string().min(1, "Time is required"),
-}).omit({ organizerId: true });
+  days: z.number().min(1, "Days must be at least 1"),
+}).omit({ organizerId: true, price: true });
 
 type CreateEventForm = z.infer<typeof createEventSchema>;
 
@@ -27,6 +28,9 @@ export default function CreateEvent() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+
+  const [calculatedPrice, setCalculatedPrice] = useState<number>(0);
+  const [priceBreakdown, setPriceBreakdown] = useState<any[]>([]);
 
   const form = useForm<CreateEventForm>({
     resolver: zodResolver(createEventSchema),
@@ -37,11 +41,35 @@ export default function CreateEvent() {
       time: "",
       location: "",
       category: "",
-      price: "0",
-      maxAttendees: undefined,
+      days: 1,
       imageUrl: "",
     },
   });
+
+  const watchedDays = form.watch("days");
+
+  useEffect(() => {
+    if (watchedDays && watchedDays > 0) {
+      calculatePrice(watchedDays);
+    }
+  }, [watchedDays]);
+
+  const calculatePrice = async (days: number) => {
+    try {
+      const response = await fetch('/api/calculate-price', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ days }),
+      });
+      const data = await response.json();
+      setCalculatedPrice(data.totalPrice);
+      setPriceBreakdown(data.breakdown);
+    } catch (error) {
+      console.error('Error calculating price:', error);
+    }
+  };
 
   const createEventMutation = useMutation({
     mutationFn: async (data: CreateEventForm) => {
@@ -52,6 +80,7 @@ export default function CreateEvent() {
       await apiRequest("POST", "/api/events", {
         ...eventData,
         date: dateTime.toISOString(),
+        price: calculatedPrice.toString(),
       });
     },
     onSuccess: () => {
@@ -260,54 +289,46 @@ export default function CreateEvent() {
                     )}
                   />
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="price"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center space-x-2">
-                            <DollarSign className="w-4 h-4" />
-                            <span>Price</span>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              placeholder="0"
-                              {...field}
-                              className="py-3"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <FormField
+                    control={form.control}
+                    name="days"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center space-x-2">
+                          <Clock className="w-4 h-4" />
+                          <span>Listing Duration (Days)</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            placeholder="1"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : 1)}
+                            className="py-3"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                    <FormField
-                      control={form.control}
-                      name="maxAttendees"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center space-x-2">
-                            <Users className="w-4 h-4" />
-                            <span>Max Attendees</span>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="1"
-                              placeholder="50"
-                              {...field}
-                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                              className="py-3"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  {/* Price Display */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">Total Price:</span>
+                      <span className="text-lg font-bold text-primary">${calculatedPrice.toFixed(2)}</span>
+                    </div>
+                    {priceBreakdown.length > 0 && (
+                      <div className="space-y-1">
+                        {priceBreakdown.map((item, index) => (
+                          <div key={index} className="flex justify-between text-xs text-gray-600">
+                            <span>{item.quantity}x {item.packageName}</span>
+                            <span>${item.price.toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <FormField

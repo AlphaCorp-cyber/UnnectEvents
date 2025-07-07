@@ -67,10 +67,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/events', isAuthenticated, async (req: any, res) => {
     try {
+      const { days, ...otherData } = req.body;
+      
+      // Calculate price based on days
+      const pricing = await storage.calculateOptimalPrice(days || 1);
+      
       const eventData = insertEventSchema.parse({
-        ...req.body,
+        ...otherData,
+        days: days || 1,
+        price: pricing.totalPrice.toString(),
         organizerId: req.user.id,
       });
+      
       const event = await storage.createEvent(eventData);
       res.json(event);
     } catch (error) {
