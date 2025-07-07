@@ -26,6 +26,8 @@ export default function Profile() {
   const [firstName, setFirstName] = useState(user?.firstName || "");
   const [lastName, setLastName] = useState(user?.lastName || "");
   const [preferredLocation, setPreferredLocation] = useState("");
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
 
   // Fetch user's events count
   const { data: userEvents } = useQuery<EventWithDetails[]>({
@@ -38,12 +40,18 @@ export default function Profile() {
   });
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: { firstName: string; lastName: string }) => {
+    mutationFn: async (data: { firstName: string; lastName: string; profileImage?: File }) => {
+      const formData = new FormData();
+      formData.append('firstName', data.firstName);
+      formData.append('lastName', data.lastName);
+      if (data.profileImage) {
+        formData.append('profileImage', data.profileImage);
+      }
+
       const response = await fetch('/api/auth/profile', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(data),
+        body: formData,
       });
       if (!response.ok) throw new Error('Failed to update profile');
       return response.json();
@@ -82,8 +90,24 @@ export default function Profile() {
     return "U";
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfileImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleUpdateProfile = () => {
-    updateProfileMutation.mutate({ firstName, lastName });
+    updateProfileMutation.mutate({ 
+      firstName, 
+      lastName, 
+      ...(profileImage && { profileImage })
+    });
   };
 
   const eventsCreated = userEvents?.length || 0;
@@ -205,6 +229,27 @@ export default function Profile() {
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="profileImage">Profile Picture</Label>
+                        <div className="flex flex-col items-center space-y-4">
+                          <Avatar className="w-24 h-24">
+                            <AvatarImage 
+                              src={profileImagePreview || user?.profileImageUrl || ""} 
+                              alt="Profile Preview" 
+                            />
+                            <AvatarFallback className="text-lg font-semibold bg-primary text-white">
+                              {getInitials(firstName || user?.firstName, lastName || user?.lastName, user?.email)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <Input
+                            id="profileImage"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="cursor-pointer"
+                          />
+                        </div>
+                      </div>
                       <div className="space-y-2">
                         <Label htmlFor="firstName">First Name</Label>
                         <Input

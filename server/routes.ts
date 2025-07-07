@@ -5,6 +5,35 @@ import { setupAuth, isAuthenticated } from "./auth";
 import { insertEventSchema, insertRsvpSchema, insertSavedEventSchema, insertAdminSettingSchema, insertPaymentSettingSchema } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+// Configure multer for file uploads
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: uploadsDir,
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, 'profile-' + uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
 
 // Admin middleware
 const isAdmin = async (req: any, res: any, next: any) => {
@@ -21,6 +50,14 @@ const isAdmin = async (req: any, res: any, next: any) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve uploaded files
+  app.use('/uploads', (req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+  });
+  app.use('/uploads', require('express').static(path.join(process.cwd(), 'uploads')));
+
   // Auth middleware
   await setupAuth(app);
 
@@ -35,7 +72,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/auth/profile', isAuthenticated, async (req: any, res) => {
+  app.put('/api/auth/profile', isAuthenticated, upload.single('profileImage'), async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { firstName, lastName } = req.body;
@@ -44,7 +81,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "First name and last name are required" });
       }
       
-      const updatedUser = await storage.updateUser(userId, { firstName, lastName });
+      const updateData: any = { firstName, lastName };
+      
+      // Handle profile image upload
+      if (req.file) {
+        const profileImageUrl = `/uploads/${req.file.filename}`;
+        updateData.profileImageUrl = profileImageUrl;
+      }
+      
+      const updatedUser = await storage.updateUser(userId, updateData);
       res.json(updatedUser);
     } catch (error) {
       console.error("Error updating profile:", error);
