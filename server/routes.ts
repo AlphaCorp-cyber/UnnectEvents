@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./auth";
 import { insertEventSchema, insertRsvpSchema, insertSavedEventSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -20,44 +20,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Firebase authentication endpoint
-  app.post('/api/auth/firebase', async (req: any, res) => {
-    try {
-      const { idToken } = req.body;
-      
-      if (!idToken) {
-        return res.status(400).json({ message: "ID token is required" });
-      }
 
-      // For now, we'll create a simple middleware that accepts the Firebase token
-      // In production, you would verify the token with Firebase Admin SDK
-      // But for development, we'll extract user info from the token payload
-      const tokenPayload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64').toString());
-      
-      const userData = {
-        id: `firebase_${tokenPayload.sub}`,
-        email: tokenPayload.email,
-        firstName: tokenPayload.given_name || null,
-        lastName: tokenPayload.family_name || null,
-        profileImageUrl: tokenPayload.picture || null,
-      };
-
-      // Create or update user in database
-      const user = await storage.upsertUser(userData);
-      
-      // Set up session
-      req.login(user, (err: any) => {
-        if (err) {
-          console.error("Error creating session:", err);
-          return res.status(500).json({ message: "Failed to create session" });
-        }
-        res.json({ success: true, user });
-      });
-    } catch (error) {
-      console.error("Firebase auth error:", error);
-      res.status(500).json({ message: "Authentication failed" });
-    }
-  });
 
   // Event routes
   app.get('/api/events', async (req, res) => {

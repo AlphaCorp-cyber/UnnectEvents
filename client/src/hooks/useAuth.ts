@@ -1,25 +1,40 @@
-import { useState, useEffect } from "react";
-import { authService, type AuthUser } from "@/lib/authService";
+import { useQuery } from "@tanstack/react-query";
+import { getQueryFn } from "@/lib/queryClient";
+import type { User } from "@shared/schema";
 
 export function useAuth() {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: user, isLoading, error } = useQuery({
+    queryKey: ['/api/auth/user'],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    retry: false,
+  });
 
-  useEffect(() => {
-    const unsubscribe = authService.onAuthStateChanged((user) => {
-      setUser(user);
-      setIsLoading(false);
-    });
+  const signInWithGoogle = () => {
+    window.location.href = "/api/auth/google";
+  };
 
-    return unsubscribe;
-  }, []);
+  const signInWithFacebook = () => {
+    window.location.href = "/api/auth/facebook";
+  };
+
+  const signOut = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST'
+      });
+      window.location.href = "/";
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
 
   return {
-    user,
+    user: user as User | null,
     isLoading,
     isAuthenticated: !!user,
-    signInWithGoogle: authService.signInWithGoogle.bind(authService),
-    signInWithFacebook: authService.signInWithFacebook.bind(authService),
-    signOut: authService.signOut.bind(authService),
+    signInWithGoogle,
+    signInWithFacebook,
+    signOut,
+    error,
   };
 }
