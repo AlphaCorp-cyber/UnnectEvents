@@ -68,32 +68,41 @@
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
-  
+
+  .dark .glass-effect {
+    background: rgba(4, 36, 60, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .dark .gradient-bg {
+    background: linear-gradient(135deg, #0891b2 0%, #04243c 100%);
+  }
+
   .gradient-bg {
     background: linear-gradient(135deg, #04243c 0%, #0891b2 100%);
   }
-  
+
   .card-shadow {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   }
-  
+
   .event-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
-  
+
   .event-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.15);
   }
-  
+
   .category-chip {
     transition: all 0.2s ease;
   }
-  
+
   .category-chip:hover {
     transform: scale(1.05);
   }
-  
+
   .fab {
     position: fixed;
     bottom: 90px;
@@ -106,12 +115,12 @@
     transition: all 0.3s ease;
     z-index: 50;
   }
-  
+
   .fab:hover {
     transform: scale(1.1);
     box-shadow: 0 6px 20px rgba(4, 36, 60, 0.6);
   }
-  
+
   .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -122,25 +131,25 @@
     border-top: 1px solid rgba(0, 0, 0, 0.1);
     z-index: 40;
   }
-  
+
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
-  
+
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
+
   .slide-in {
     animation: slideIn 0.3s ease-out;
   }
-  
+
   @keyframes slideIn {
     from { transform: translateY(100%); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
   }
-  
+
   @media (max-width: 640px) {
     .fab {
       bottom: 80px;
