@@ -449,20 +449,16 @@ export class DatabaseStorage implements IStorage {
       return { totalPrice: 0, breakdown: [] };
     }
 
-    // Sort packages by efficiency (price per day)
-    const sortedPackages = packages.sort((a, b) => {
-      const aEfficiency = parseFloat(a.price.toString()) / a.days;
-      const bEfficiency = parseFloat(b.price.toString()) / b.days;
-      return aEfficiency - bEfficiency;
-    });
+    // Sort packages by duration (largest first for greedy algorithm)
+    const sortedPackages = packages.sort((a, b) => b.duration - a.duration);
 
     let remainingDays = days;
     const breakdown: Array<{ packageName: string; quantity: number; price: number }> = [];
     let totalPrice = 0;
 
-    // Use greedy algorithm to find optimal combination
-    for (const pkg of sortedPackages.reverse()) {
-      const quantity = Math.floor(remainingDays / pkg.days);
+    // Use greedy algorithm: start with largest packages first
+    for (const pkg of sortedPackages) {
+      const quantity = Math.floor(remainingDays / pkg.duration);
       if (quantity > 0) {
         const packagePrice = quantity * parseFloat(pkg.price.toString());
         breakdown.push({
@@ -471,20 +467,8 @@ export class DatabaseStorage implements IStorage {
           price: packagePrice,
         });
         totalPrice += packagePrice;
-        remainingDays -= quantity * pkg.days;
+        remainingDays -= quantity * pkg.duration;
       }
-    }
-
-    // If there are remaining days, use the smallest package
-    if (remainingDays > 0 && sortedPackages.length > 0) {
-      const smallestPackage = sortedPackages[0];
-      const packagePrice = parseFloat(smallestPackage.price.toString());
-      breakdown.push({
-        packageName: smallestPackage.name,
-        quantity: 1,
-        price: packagePrice,
-      });
-      totalPrice += packagePrice;
     }
 
     return { totalPrice, breakdown };
