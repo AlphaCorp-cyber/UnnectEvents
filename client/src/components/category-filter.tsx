@@ -20,8 +20,8 @@ export default function CategoryFilter({ selectedCategory, onCategoryChange }: C
   ];
 
   return (
-    <div className="px-4 py-2">
-      <div className="flex space-x-2 overflow-x-auto hide-scrollbar">
+    <div className="px-4 lg:px-8 py-2">
+      <div className="flex space-x-2 overflow-x-auto hide-scrollbar lg:flex-wrap lg:overflow-visible">
         {categories.map((category) => (
           <Button
             key={category.value}

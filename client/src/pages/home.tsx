@@ -21,7 +21,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: events, isLoading } = useQuery<EventWithDetails[]>({
-    queryKey: ["/api/events", selectedCategory],
+    queryKey: [`/api/events${selectedCategory !== "all" ? `?category=${selectedCategory}` : ""}`, selectedCategory],
     onError: (error) => {
       if (isUnauthorizedError(error)) {
         toast({
@@ -51,13 +51,13 @@ export default function Home() {
   const nearbyEvents = filteredEvents.slice(3);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-md mx-auto bg-white min-h-screen relative">
+    <div className="min-h-screen bg-gray-50 dark:bg-background">
+      <div className="max-w-md lg:max-w-4xl xl:max-w-6xl mx-auto bg-white dark:bg-background min-h-screen relative">
         {/* Header */}
         <Header />
 
         {/* Search Bar */}
-        <div className="px-4 py-3">
+        <div className="px-4 lg:px-8 py-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
@@ -78,9 +78,9 @@ export default function Home() {
 
         {/* Featured Events Section */}
         {featuredEvents.length > 0 && (
-          <div className="px-4 py-4">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Featured Events</h2>
-            <div className="flex space-x-4 overflow-x-auto hide-scrollbar">
+          <div className="px-4 lg:px-8 py-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Featured Events</h2>
+            <div className="flex space-x-4 overflow-x-auto hide-scrollbar lg:grid lg:grid-cols-3 lg:gap-4 lg:overflow-visible">
               {featuredEvents.map((event) => (
                 <EventCard
                   key={event.id}
@@ -94,31 +94,31 @@ export default function Home() {
         )}
 
         {/* Events Near You Section */}
-        <div className="px-4 py-4">
+        <div className="px-4 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-900">Events Near You</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Events Near You</h2>
             <Button variant="ghost" size="sm" className="text-primary font-medium">
               View All
             </Button>
           </div>
           
           {isLoading ? (
-            <div className="space-y-4">
+            <div className="space-y-4 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="bg-white rounded-xl card-shadow p-4 animate-pulse">
+                <div key={i} className="bg-white dark:bg-card rounded-xl card-shadow p-4 animate-pulse">
                   <div className="flex space-x-3">
-                    <div className="w-16 h-16 bg-gray-200 rounded-lg"></div>
+                    <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
                     <div className="flex-1">
-                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : nearbyEvents.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-4 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0">
               {nearbyEvents.map((event) => (
                 <EventCard
                   key={event.id}
@@ -130,7 +130,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-gray-500">No events found</p>
+              <p className="text-gray-500 dark:text-gray-400">No events found</p>
             </div>
           )}
         </div>
