@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { z } from "zod";
-import { ArrowLeft, Calendar, MapPin, Clock, Tag, FileText } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Clock, Tag, FileText, Phone, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +20,8 @@ const createEventSchema = insertEventSchema.extend({
   date: z.string().min(1, "Date is required"),
   time: z.string().min(1, "Time is required"),
   days: z.number().min(1, "Days must be at least 1"),
+  contactEmail: z.string().email("Invalid email").optional().or(z.literal("")),
+  contactPhone: z.string().optional(),
 }).omit({ organizerId: true, price: true });
 
 type CreateEventForm = z.infer<typeof createEventSchema>;
@@ -43,6 +45,8 @@ export default function CreateEvent() {
       category: "",
       days: 1,
       imageUrl: "",
+      contactEmail: "",
+      contactPhone: "",
     },
   });
 
@@ -330,6 +334,50 @@ export default function CreateEvent() {
                       </div>
                     )}
                   </div>
+
+                  <FormField
+                    control={form.control}
+                    name="contactEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center space-x-2">
+                          <Mail className="w-4 h-4" />
+                          <span>Contact Email (Optional)</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="contact@example.com"
+                            {...field}
+                            className="py-3"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="contactPhone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center space-x-2">
+                          <Phone className="w-4 h-4" />
+                          <span>Contact Phone (Optional)</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="tel"
+                            placeholder="+1 (555) 123-4567"
+                            {...field}
+                            className="py-3"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <FormField
                     control={form.control}

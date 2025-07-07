@@ -282,6 +282,23 @@ export default function EventDetails() {
                   </div>
                 </div>
 
+                {/* Contact Information */}
+                {(event.contactEmail || event.contactPhone) && (
+                  <div className="col-span-2 mt-4 p-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Contact Information</p>
+                    {event.contactEmail && (
+                      <p className="text-sm text-gray-600 mb-1">
+                        📧 {event.contactEmail}
+                      </p>
+                    )}
+                    {event.contactPhone && (
+                      <p className="text-sm text-gray-600">
+                        📞 {event.contactPhone}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-secondary/10 rounded-full flex items-center justify-center">
                     <Users className="w-5 h-5 text-secondary" />

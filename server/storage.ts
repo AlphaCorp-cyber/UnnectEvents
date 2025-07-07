@@ -103,66 +103,71 @@ export class DatabaseStorage implements IStorage {
 
   // Event operations
   async getEvents(userId?: string, category?: string): Promise<EventWithDetails[]> {
-    let baseQuery = db
-      .select({
-        id: events.id,
-        title: events.title,
-        description: events.description,
-        date: events.date,
-        location: events.location,
-        category: events.category,
-        price: events.price,
-        maxAttendees: events.maxAttendees,
-        imageUrl: events.imageUrl,
-        organizerId: events.organizerId,
-        createdAt: events.createdAt,
-        updatedAt: events.updatedAt,
-        organizer: users,
-        attendeeCount: count(rsvps.id),
-      })
-      .from(events)
-      .leftJoin(users, eq(events.organizerId, users.id))
-      .leftJoin(rsvps, and(eq(rsvps.eventId, events.id), eq(rsvps.status, "going")))
-      .groupBy(events.id, users.id)
-      .orderBy(desc(events.date));
+    try {
+      let baseQuery = db
+        .select({
+          id: events.id,
+          title: events.title,
+          description: events.description,
+          date: events.date,
+          location: events.location,
+          category: events.category,
+          price: events.price,
+          maxAttendees: events.maxAttendees,
+          imageUrl: events.imageUrl,
+          organizerId: events.organizerId,
+          createdAt: events.createdAt,
+          updatedAt: events.updatedAt,
+          organizer: users,
+          attendeeCount: count(rsvps.id),
+        })
+        .from(events)
+        .leftJoin(users, eq(events.organizerId, users.id))
+        .leftJoin(rsvps, and(eq(rsvps.eventId, events.id), eq(rsvps.status, "going")))
+        .groupBy(events.id, users.id)
+        .orderBy(desc(events.date));
 
-    let results;
-    if (category && category !== "all") {
-      results = await baseQuery.where(eq(events.category, category));
-    } else {
-      results = await baseQuery;
-    }
+      let results;
+      if (category && category !== "all") {
+        results = await baseQuery.where(eq(events.category, category));
+      } else {
+        results = await baseQuery;
+      }
 
-    // Filter out events without organizers and ensure non-null organizers
-    const validResults = results.filter(result => result.organizer !== null) as (typeof results[0] & { organizer: NonNullable<typeof results[0]['organizer']> })[];
+      // Filter out events without organizers and ensure non-null organizers
+      const validResults = results.filter(result => result.organizer !== null) as (typeof results[0] & { organizer: NonNullable<typeof results[0]['organizer']> })[];
 
-    // If userId is provided, get user's RSVP status and saved status
-    if (userId) {
-      const userRsvps = await db
-        .select({ eventId: rsvps.eventId, status: rsvps.status })
-        .from(rsvps)
-        .where(eq(rsvps.userId, userId));
+      // If userId is provided, get user's RSVP status and saved status
+      if (userId) {
+        const userRsvps = await db
+          .select({ eventId: rsvps.eventId, status: rsvps.status })
+          .from(rsvps)
+          .where(eq(rsvps.userId, userId));
 
-      const userSavedEvents = await db
-        .select({ eventId: savedEvents.eventId })
-        .from(savedEvents)
-        .where(eq(savedEvents.userId, userId));
+        const userSavedEvents = await db
+          .select({ eventId: savedEvents.eventId })
+          .from(savedEvents)
+          .where(eq(savedEvents.userId, userId));
 
-      const rsvpMap = new Map(userRsvps.map(r => [r.eventId, r.status]));
-      const savedMap = new Set(userSavedEvents.map(s => s.eventId));
+        const rsvpMap = new Map(userRsvps.map(r => [r.eventId, r.status]));
+        const savedMap = new Set(userSavedEvents.map(s => s.eventId));
+
+        return validResults.map(result => ({
+          ...result,
+          organizer: result.organizer!,
+          userRsvpStatus: rsvpMap.get(result.id),
+          isSaved: savedMap.has(result.id),
+        })) as EventWithDetails[];
+      }
 
       return validResults.map(result => ({
         ...result,
         organizer: result.organizer!,
-        userRsvpStatus: rsvpMap.get(result.id),
-        isSaved: savedMap.has(result.id),
       })) as EventWithDetails[];
+    } catch (error) {
+      console.error("Error in getEvents:", error);
+      throw error;
     }
-
-    return validResults.map(result => ({
-      ...result,
-      organizer: result.organizer!,
-    })) as EventWithDetails[];
   }
 
   async getEvent(id: number, userId?: string): Promise<EventWithDetails | undefined> {
@@ -449,17 +454,17 @@ export class DatabaseStorage implements IStorage {
 
   async calculateOptimalPrice(days: number): Promise<{ totalPrice: number; breakdown: Array<{ packageName: string; quantity: number; price: number }> }> {
     const packages = await this.getListingPackages();
-    
+
     // Sort packages by duration in descending order for optimal calculation
     const sortedPackages = packages.sort((a, b) => b.duration - a.duration);
-    
+
     let remainingDays = days;
     let totalPrice = 0;
     const breakdown: Array<{ packageName: string; quantity: number; price: number }> = [];
-    
+
     for (const pkg of sortedPackages) {
       if (remainingDays <= 0) break;
-      
+
       const quantity = Math.floor(remainingDays / pkg.duration);
       if (quantity > 0) {
         const packagePrice = parseFloat(pkg.price) * quantity;
@@ -472,7 +477,7 @@ export class DatabaseStorage implements IStorage {
         remainingDays -= quantity * pkg.duration;
       }
     }
-    
+
     return { totalPrice, breakdown };
   }
 }

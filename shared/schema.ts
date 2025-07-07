@@ -50,6 +50,8 @@ export const events = pgTable("events", {
   price: decimal("price", { precision: 10, scale: 2 }).default("0"),
   imageUrl: varchar("image_url", { length: 500 }),
   organizerId: varchar("organizer_id").notNull().references(() => users.id),
+  contactEmail: varchar("contact_email", { length: 255 }),
+  contactPhone: varchar("contact_phone", { length: 50 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
