@@ -241,6 +241,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteEvent(id: number): Promise<void> {
+    // Delete related RSVPs first
+    await db.delete(rsvps).where(eq(rsvps.eventId, id));
+    
+    // Delete related saved events
+    await db.delete(savedEvents).where(eq(savedEvents.eventId, id));
+    
+    // Now delete the event
     await db.delete(events).where(eq(events.id, id));
   }
 
