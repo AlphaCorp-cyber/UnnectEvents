@@ -1,27 +1,6 @@
-import {
-  users,
-  events,
-  rsvps,
-  savedEvents,
-  adminSettings,
-  paymentSettings,
-  listingPackages,
-  type User,
-  type UpsertUser,
-  type Event,
-  type InsertEvent,
-  type InsertRsvp,
-  type InsertSavedEvent,
-  type EventWithDetails,
-  type AdminSetting,
-  type InsertAdminSetting,
-  type PaymentSetting,
-  type InsertPaymentSetting,
-  type ListingPackage,
-  type InsertListingPackage,
-} from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, asc, sql, and, count } from "drizzle-orm";
+import { users, events, rsvps, savedEvents, adminSettings, paymentSettings, listingPackages, UpsertUser, User, Event, EventWithDetails, InsertEvent, InsertRsvp, InsertSavedEvent, AdminSetting, InsertAdminSetting, PaymentSetting, InsertPaymentSetting, ListingPackage, InsertListingPackage } from "../shared/schema";
+import { eq, desc, and, count, sql, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -68,76 +47,89 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result[0];
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user;
+    const result = await db.select().from(users).where(eq(users.email, email));
+    return result[0];
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return user;
+    const existing = await this.getUser(userData.id);
+    if (existing) {
+      const updated = await db.update(users)
+        .set({ ...userData, updatedAt: new Date() })
+        .where(eq(users.id, userData.id))
+        .returning();
+      return updated[0];
+    } else {
+      const user = await db.insert(users).values(userData).returning();
+      return user[0];
+    }
   }
 
   async updateUser(id: string, updates: Partial<UpsertUser>): Promise<User> {
-    const [user] = await db
-      .update(users)
+    const user = await db.update(users)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(users.id, id))
       .returning();
-    return user;
+    return user[0];
   }
 
   // Event operations
   async getEvents(userId?: string, category?: string): Promise<EventWithDetails[]> {
     try {
-      let baseQuery = db
-        .select({
-          id: events.id,
-          title: events.title,
-          description: events.description,
-          date: events.date,
-          location: events.location,
-          category: events.category,
-          price: events.price,
-          maxAttendees: events.maxAttendees,
-          imageUrl: events.imageUrl,
-          organizerId: events.organizerId,
-          createdAt: events.createdAt,
-          updatedAt: events.updatedAt,
-          organizer: users,
-          attendeeCount: count(rsvps.id),
-        })
-        .from(events)
-        .leftJoin(users, eq(events.organizerId, users.id))
-        .leftJoin(rsvps, and(eq(rsvps.eventId, events.id), eq(rsvps.status, "going")))
-        .groupBy(events.id, users.id)
-        .orderBy(desc(events.date));
-
-      let results;
+      // Get all events first
+      let eventsQuery = db.select().from(events);
+      
       if (category && category !== "all") {
-        results = await baseQuery.where(eq(events.category, category));
-      } else {
-        results = await baseQuery;
+        eventsQuery = eventsQuery.where(eq(events.category, category));
+      }
+      
+      const allEvents = await eventsQuery.orderBy(desc(events.date));
+
+      if (allEvents.length === 0) {
+        return [];
       }
 
-      // Filter out events without organizers and ensure non-null organizers
-      const validResults = results.filter(result => result.organizer !== null) as (typeof results[0] & { organizer: NonNullable<typeof results[0]['organizer']> })[];
+      // Get organizers for all events
+      const organizerIds = [...new Set(allEvents.map(event => event.organizerId))];
+      const organizers = await db
+        .select()
+        .from(users)
+        .where(inArray(users.id, organizerIds));
+
+      // Get attendee counts for all events
+      const attendeeCounts = await db
+        .select({
+          eventId: rsvps.eventId,
+          count: count(rsvps.id),
+        })
+        .from(rsvps)
+        .where(and(
+          inArray(rsvps.eventId, allEvents.map(e => e.id)),
+          eq(rsvps.status, "going")
+        ))
+        .groupBy(rsvps.eventId);
+
+      // Create organizer lookup map
+      const organizerMap = organizers.reduce((acc, organizer) => {
+        acc[organizer.id] = organizer;
+        return acc;
+      }, {} as Record<string, typeof organizers[0]>);
+
+      // Create attendee count lookup map
+      const attendeeCountMap = attendeeCounts.reduce((acc, item) => {
+        acc[item.eventId] = item.count;
+        return acc;
+      }, {} as Record<number, number>);
 
       // If userId is provided, get user's RSVP status and saved status
+      let userRsvpMap: Record<number, string> = {};
+      let userSavedMap: Record<number, boolean> = {};
+      
       if (userId) {
         const userRsvps = await db
           .select({ eventId: rsvps.eventId, status: rsvps.status })
@@ -149,21 +141,32 @@ export class DatabaseStorage implements IStorage {
           .from(savedEvents)
           .where(eq(savedEvents.userId, userId));
 
-        const rsvpMap = new Map(userRsvps.map(r => [r.eventId, r.status]));
-        const savedMap = new Set(userSavedEvents.map(s => s.eventId));
+        userRsvpMap = userRsvps.reduce((acc, rsvp) => {
+          acc[rsvp.eventId] = rsvp.status;
+          return acc;
+        }, {} as Record<number, string>);
 
-        return validResults.map(result => ({
-          ...result,
-          organizer: result.organizer!,
-          userRsvpStatus: rsvpMap.get(result.id),
-          isSaved: savedMap.has(result.id),
-        })) as EventWithDetails[];
+        userSavedMap = userSavedEvents.reduce((acc, saved) => {
+          acc[saved.eventId] = true;
+          return acc;
+        }, {} as Record<number, boolean>);
       }
 
-      return validResults.map(result => ({
-        ...result,
-        organizer: result.organizer!,
-      })) as EventWithDetails[];
+      // Combine all data
+      const result = allEvents.map(event => {
+        const organizer = organizerMap[event.organizerId];
+        const attendeeCount = attendeeCountMap[event.id] || 0;
+        
+        return {
+          ...event,
+          organizer,
+          attendeeCount,
+          userRsvpStatus: userRsvpMap[event.id] || null,
+          isSaved: userSavedMap[event.id] || false,
+        };
+      }).filter(event => event.organizer !== undefined) as EventWithDetails[];
+
+      return result;
     } catch (error) {
       console.error("Error in getEvents:", error);
       throw error;
@@ -171,64 +174,70 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEvent(id: number, userId?: string): Promise<EventWithDetails | undefined> {
-    const [result] = await db
-      .select({
-        id: events.id,
-        title: events.title,
-        description: events.description,
-        date: events.date,
-        location: events.location,
-        category: events.category,
-        price: events.price,
-        maxAttendees: events.maxAttendees,
-        imageUrl: events.imageUrl,
-        organizerId: events.organizerId,
-        createdAt: events.createdAt,
-        updatedAt: events.updatedAt,
-        organizer: users,
-        attendeeCount: count(rsvps.id),
-      })
-      .from(events)
-      .leftJoin(users, eq(events.organizerId, users.id))
-      .leftJoin(rsvps, and(eq(rsvps.eventId, events.id), eq(rsvps.status, "going")))
-      .where(eq(events.id, id))
-      .groupBy(events.id, users.id);
+    try {
+      const eventResults = await db.select().from(events).where(eq(events.id, id));
+      if (eventResults.length === 0) return undefined;
 
-    if (!result) return undefined;
+      const event = eventResults[0];
+      
+      // Get organizer
+      const organizer = await this.getUser(event.organizerId);
+      if (!organizer) return undefined;
 
-    if (userId) {
-      const [userRsvp] = await db
-        .select({ status: rsvps.status })
+      // Get attendee count
+      const attendeeCountResult = await db
+        .select({ count: count(rsvps.id) })
         .from(rsvps)
-        .where(and(eq(rsvps.eventId, id), eq(rsvps.userId, userId)));
+        .where(and(eq(rsvps.eventId, id), eq(rsvps.status, "going")))
+        .groupBy(rsvps.eventId);
 
-      const [savedEvent] = await db
-        .select({ id: savedEvents.id })
-        .from(savedEvents)
-        .where(and(eq(savedEvents.eventId, id), eq(savedEvents.userId, userId)));
+      const attendeeCount = attendeeCountResult[0]?.count || 0;
+
+      // Get user's RSVP status if userId provided
+      let userRsvpStatus = null;
+      let isSaved = false;
+      
+      if (userId) {
+        const userRsvp = await db
+          .select({ status: rsvps.status })
+          .from(rsvps)
+          .where(and(eq(rsvps.eventId, id), eq(rsvps.userId, userId)));
+        
+        userRsvpStatus = userRsvp[0]?.status || null;
+
+        const savedEvent = await db
+          .select()
+          .from(savedEvents)
+          .where(and(eq(savedEvents.eventId, id), eq(savedEvents.userId, userId)));
+        
+        isSaved = savedEvent.length > 0;
+      }
 
       return {
-        ...result,
-        userRsvpStatus: userRsvp?.status,
-        isSaved: !!savedEvent,
-      };
+        ...event,
+        organizer,
+        attendeeCount,
+        userRsvpStatus,
+        isSaved,
+      } as EventWithDetails;
+    } catch (error) {
+      console.error("Error in getEvent:", error);
+      throw error;
     }
-
-    return result;
   }
 
   async createEvent(event: InsertEvent): Promise<Event> {
-    const [newEvent] = await db.insert(events).values(event).returning();
-    return newEvent;
+    const result = await db.insert(events).values(event).returning();
+    return result[0];
   }
 
   async updateEvent(id: number, event: Partial<InsertEvent>): Promise<Event> {
-    const [updatedEvent] = await db
+    const result = await db
       .update(events)
       .set({ ...event, updatedAt: new Date() })
       .where(eq(events.id, id))
       .returning();
-    return updatedEvent;
+    return result[0];
   }
 
   async deleteEvent(id: number): Promise<void> {
@@ -236,39 +245,50 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserEvents(userId: string): Promise<EventWithDetails[]> {
-    const results = await db
-      .select({
-        id: events.id,
-        title: events.title,
-        description: events.description,
-        date: events.date,
-        location: events.location,
-        category: events.category,
-        price: events.price,
-        maxAttendees: events.maxAttendees,
-        imageUrl: events.imageUrl,
-        organizerId: events.organizerId,
-        createdAt: events.createdAt,
-        updatedAt: events.updatedAt,
-        organizer: users,
-        attendeeCount: count(rsvps.id),
-      })
-      .from(events)
-      .leftJoin(users, eq(events.organizerId, users.id))
-      .leftJoin(rsvps, and(eq(rsvps.eventId, events.id), eq(rsvps.status, "going")))
-      .where(eq(events.organizerId, userId))
-      .groupBy(events.id, users.id)
-      .orderBy(desc(events.date));
+    try {
+      const userEvents = await db.select().from(events).where(eq(events.organizerId, userId));
+      
+      if (userEvents.length === 0) {
+        return [];
+      }
 
-    return results;
+      const organizer = await this.getUser(userId);
+      if (!organizer) return [];
+
+      // Get attendee counts
+      const attendeeCounts = await db
+        .select({
+          eventId: rsvps.eventId,
+          count: count(rsvps.id),
+        })
+        .from(rsvps)
+        .where(and(
+          inArray(rsvps.eventId, userEvents.map(e => e.id)),
+          eq(rsvps.status, "going")
+        ))
+        .groupBy(rsvps.eventId);
+
+      const attendeeCountMap = attendeeCounts.reduce((acc, item) => {
+        acc[item.eventId] = item.count;
+        return acc;
+      }, {} as Record<number, number>);
+
+      return userEvents.map(event => ({
+        ...event,
+        organizer,
+        attendeeCount: attendeeCountMap[event.id] || 0,
+        userRsvpStatus: null,
+        isSaved: false,
+      })) as EventWithDetails[];
+    } catch (error) {
+      console.error("Error in getUserEvents:", error);
+      throw error;
+    }
   }
 
   // RSVP operations
   async createRsvp(rsvp: InsertRsvp): Promise<void> {
-    await db.insert(rsvps).values(rsvp).onConflictDoUpdate({
-      target: [rsvps.eventId, rsvps.userId],
-      set: { status: rsvp.status },
-    });
+    await db.insert(rsvps).values(rsvp);
   }
 
   async updateRsvp(eventId: number, userId: string, status: string): Promise<void> {
@@ -283,35 +303,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserRsvps(userId: string): Promise<EventWithDetails[]> {
-    const results = await db
-      .select({
-        id: events.id,
-        title: events.title,
-        description: events.description,
-        date: events.date,
-        location: events.location,
-        category: events.category,
-        price: events.price,
-        maxAttendees: events.maxAttendees,
-        imageUrl: events.imageUrl,
-        organizerId: events.organizerId,
-        createdAt: events.createdAt,
-        updatedAt: events.updatedAt,
-        organizer: users,
-        attendeeCount: count(rsvps.id),
-        userRsvpStatus: rsvps.status,
-      })
-      .from(events)
-      .leftJoin(users, eq(events.organizerId, users.id))
-      .leftJoin(rsvps, and(eq(rsvps.eventId, events.id), eq(rsvps.status, "going")))
-      .innerJoin(
-        sql`(SELECT * FROM ${rsvps} WHERE ${rsvps.userId} = ${userId}) as user_rsvp`,
-        sql`user_rsvp.event_id = ${events.id}`
-      )
-      .groupBy(events.id, users.id, sql`user_rsvp.status`)
-      .orderBy(desc(events.date));
+    // Similar to getEvents but filtered by user RSVPs
+    const userRsvps = await db.select().from(rsvps).where(eq(rsvps.userId, userId));
+    
+    if (userRsvps.length === 0) {
+      return [];
+    }
 
-    return results;
+    const eventIds = userRsvps.map(rsvp => rsvp.eventId);
+    const userEvents = await db.select().from(events).where(inArray(events.id, eventIds));
+
+    // Get organizers
+    const organizerIds = [...new Set(userEvents.map(event => event.organizerId))];
+    const organizers = await db.select().from(users).where(inArray(users.id, organizerIds));
+
+    const organizerMap = organizers.reduce((acc, organizer) => {
+      acc[organizer.id] = organizer;
+      return acc;
+    }, {} as Record<string, typeof organizers[0]>);
+
+    const rsvpMap = userRsvps.reduce((acc, rsvp) => {
+      acc[rsvp.eventId] = rsvp.status;
+      return acc;
+    }, {} as Record<number, string>);
+
+    return userEvents.map(event => ({
+      ...event,
+      organizer: organizerMap[event.organizerId],
+      attendeeCount: 0, // We can calculate this if needed
+      userRsvpStatus: rsvpMap[event.id],
+      isSaved: false,
+    })).filter(event => event.organizer !== undefined) as EventWithDetails[];
   }
 
   // Saved events operations
@@ -320,69 +342,55 @@ export class DatabaseStorage implements IStorage {
   }
 
   async unsaveEvent(eventId: number, userId: string): Promise<void> {
-    await db.delete(savedEvents).where(
-      and(eq(savedEvents.eventId, eventId), eq(savedEvents.userId, userId))
-    );
+    await db.delete(savedEvents).where(and(eq(savedEvents.eventId, eventId), eq(savedEvents.userId, userId)));
   }
 
   async getUserSavedEvents(userId: string): Promise<EventWithDetails[]> {
-    const results = await db
-      .select({
-        id: events.id,
-        title: events.title,
-        description: events.description,
-        date: events.date,
-        location: events.location,
-        category: events.category,
-        price: events.price,
-        maxAttendees: events.maxAttendees,
-        imageUrl: events.imageUrl,
-        organizerId: events.organizerId,
-        createdAt: events.createdAt,
-        updatedAt: events.updatedAt,
-        organizer: users,
-        attendeeCount: count(rsvps.id),
-        isSaved: sql<boolean>`true`,
-      })
-      .from(events)
-      .leftJoin(users, eq(events.organizerId, users.id))
-      .leftJoin(rsvps, and(eq(rsvps.eventId, events.id), eq(rsvps.status, "going")))
-      .innerJoin(savedEvents, eq(savedEvents.eventId, events.id))
-      .where(eq(savedEvents.userId, userId))
-      .groupBy(events.id, users.id)
-      .orderBy(desc(events.date));
+    const userSavedEvents = await db.select().from(savedEvents).where(eq(savedEvents.userId, userId));
+    
+    if (userSavedEvents.length === 0) {
+      return [];
+    }
 
-    return results;
+    const eventIds = userSavedEvents.map(saved => saved.eventId);
+    const savedEventsList = await db.select().from(events).where(inArray(events.id, eventIds));
+
+    // Get organizers
+    const organizerIds = [...new Set(savedEventsList.map(event => event.organizerId))];
+    const organizers = await db.select().from(users).where(inArray(users.id, organizerIds));
+
+    const organizerMap = organizers.reduce((acc, organizer) => {
+      acc[organizer.id] = organizer;
+      return acc;
+    }, {} as Record<string, typeof organizers[0]>);
+
+    return savedEventsList.map(event => ({
+      ...event,
+      organizer: organizerMap[event.organizerId],
+      attendeeCount: 0, // We can calculate this if needed
+      userRsvpStatus: null,
+      isSaved: true,
+    })).filter(event => event.organizer !== undefined) as EventWithDetails[];
   }
 
   // Admin settings operations
   async getAdminSetting(key: string): Promise<AdminSetting | undefined> {
-    const [setting] = await db
-      .select()
-      .from(adminSettings)
-      .where(eq(adminSettings.key, key));
-    return setting || undefined;
+    const result = await db.select().from(adminSettings).where(eq(adminSettings.key, key));
+    return result[0];
   }
 
   async setAdminSetting(setting: InsertAdminSetting): Promise<AdminSetting> {
-    const [existingSetting] = await db
-      .select()
-      .from(adminSettings)
-      .where(eq(adminSettings.key, setting.key));
-
-    if (existingSetting) {
-      const [updated] = await db
+    const existing = await this.getAdminSetting(setting.key);
+    if (existing) {
+      const updated = await db
         .update(adminSettings)
-        .set({ value: setting.value, updatedAt: new Date() })
+        .set({ value: setting.value, isEncrypted: setting.isEncrypted })
         .where(eq(adminSettings.key, setting.key))
         .returning();
-      return updated;
+      return updated[0];
     } else {
-      const [created] = await db
-        .insert(adminSettings)
-        .values(setting)
-        .returning();
-      return created;
+      const created = await db.insert(adminSettings).values(setting).returning();
+      return created[0];
     }
   }
 
@@ -392,90 +400,91 @@ export class DatabaseStorage implements IStorage {
 
   // Payment settings operations
   async getPaymentSettings(): Promise<PaymentSetting | undefined> {
-    const [settings] = await db
-      .select()
-      .from(paymentSettings)
-      .where(eq(paymentSettings.isActive, true))
-      .orderBy(desc(paymentSettings.createdAt));
-    return settings || undefined;
+    const result = await db.select().from(paymentSettings);
+    return result[0];
   }
 
   async updatePaymentSettings(settings: Partial<InsertPaymentSetting>): Promise<PaymentSetting> {
-    const existingSettings = await this.getPaymentSettings();
-
-    if (existingSettings) {
-      const [updated] = await db
+    const existing = await this.getPaymentSettings();
+    if (existing) {
+      const updated = await db
         .update(paymentSettings)
-        .set({ ...settings, updatedAt: new Date() })
-        .where(eq(paymentSettings.id, existingSettings.id))
+        .set(settings)
+        .where(eq(paymentSettings.id, existing.id))
         .returning();
-      return updated;
+      return updated[0];
     } else {
-      const [created] = await db
-        .insert(paymentSettings)
-        .values(settings as InsertPaymentSetting)
-        .returning();
-      return created;
+      const created = await db.insert(paymentSettings).values(settings as InsertPaymentSetting).returning();
+      return created[0];
     }
   }
 
+  // Listing packages operations
   async getListingPackages(): Promise<ListingPackage[]> {
-    const packages = await db
-      .select()
-      .from(listingPackages)
-      .where(eq(listingPackages.isActive, true))
-      .orderBy(asc(listingPackages.duration));
-    return packages;
+    return await db.select().from(listingPackages);
   }
 
   async createListingPackage(packageData: InsertListingPackage): Promise<ListingPackage> {
-    const [newPackage] = await db
-      .insert(listingPackages)
-      .values(packageData)
-      .returning();
-    return newPackage;
+    const result = await db.insert(listingPackages).values(packageData).returning();
+    return result[0];
   }
 
   async updateListingPackage(id: number, packageData: Partial<InsertListingPackage>): Promise<ListingPackage> {
-    const [updatedPackage] = await db
+    const result = await db
       .update(listingPackages)
       .set(packageData)
       .where(eq(listingPackages.id, id))
       .returning();
-    return updatedPackage;
+    return result[0];
   }
 
   async deleteListingPackage(id: number): Promise<void> {
-    await db
-      .update(listingPackages)
-      .set({ isActive: false })
-      .where(eq(listingPackages.id, id));
+    await db.delete(listingPackages).where(eq(listingPackages.id, id));
   }
 
   async calculateOptimalPrice(days: number): Promise<{ totalPrice: number; breakdown: Array<{ packageName: string; quantity: number; price: number }> }> {
     const packages = await this.getListingPackages();
+    
+    if (packages.length === 0) {
+      return { totalPrice: 0, breakdown: [] };
+    }
 
-    // Sort packages by duration in descending order for optimal calculation
-    const sortedPackages = packages.sort((a, b) => b.duration - a.duration);
+    // Sort packages by efficiency (price per day)
+    const sortedPackages = packages.sort((a, b) => {
+      const aEfficiency = parseFloat(a.price.toString()) / a.days;
+      const bEfficiency = parseFloat(b.price.toString()) / b.days;
+      return aEfficiency - bEfficiency;
+    });
 
     let remainingDays = days;
-    let totalPrice = 0;
     const breakdown: Array<{ packageName: string; quantity: number; price: number }> = [];
+    let totalPrice = 0;
 
-    for (const pkg of sortedPackages) {
-      if (remainingDays <= 0) break;
-
-      const quantity = Math.floor(remainingDays / pkg.duration);
+    // Use greedy algorithm to find optimal combination
+    for (const pkg of sortedPackages.reverse()) {
+      const quantity = Math.floor(remainingDays / pkg.days);
       if (quantity > 0) {
-        const packagePrice = parseFloat(pkg.price) * quantity;
-        totalPrice += packagePrice;
+        const packagePrice = quantity * parseFloat(pkg.price.toString());
         breakdown.push({
           packageName: pkg.name,
           quantity,
-          price: packagePrice
+          price: packagePrice,
         });
-        remainingDays -= quantity * pkg.duration;
+        totalPrice += packagePrice;
+        remainingDays -= quantity * pkg.days;
       }
+    }
+
+    // If there are remaining days, use the smallest package
+    if (remainingDays > 0 && sortedPackages.length > 0) {
+      const smallestPackage = sortedPackages[0];
+      const packagePrice = parseFloat(smallestPackage.price.toString());
+      breakdown.push({
+        packageName: smallestPackage.name,
+        quantity: 1,
+        price: packagePrice,
+      });
+      totalPrice += packagePrice;
     }
 
     return { totalPrice, breakdown };

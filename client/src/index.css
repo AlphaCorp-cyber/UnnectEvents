@@ -60,6 +60,10 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+  
+  html {
+    @apply bg-background;
+  }
 }
 
 @layer utilities {
@@ -130,6 +134,11 @@
     backdrop-filter: blur(10px);
     border-top: 1px solid rgba(0, 0, 0, 0.1);
     z-index: 40;
+  }
+  
+  .dark .bottom-nav {
+    background: rgba(4, 36, 60, 0.95);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .hide-scrollbar::-webkit-scrollbar {
