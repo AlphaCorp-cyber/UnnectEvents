@@ -156,8 +156,8 @@ export default function CreateEvent() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-md mx-auto bg-white min-h-screen">
+    <div className="min-h-screen bg-gray-50 dark:bg-background">
+      <div className="max-w-md lg:max-w-4xl xl:max-w-6xl mx-auto bg-white dark:bg-background min-h-screen">
         {/* Header */}
         <div className="glass-effect sticky top-0 z-30 p-4">
           <div className="flex items-center justify-between">
@@ -175,7 +175,7 @@ export default function CreateEvent() {
         </div>
 
         {/* Form */}
-        <div className="p-4">
+        <div className="p-4 lg:px-8">
           <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">

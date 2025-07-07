@@ -56,29 +56,29 @@ export default function MyEvents() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-md mx-auto bg-white min-h-screen relative">
+    <div className="min-h-screen bg-gray-50 dark:bg-background">
+      <div className="max-w-md lg:max-w-4xl xl:max-w-6xl mx-auto bg-white dark:bg-background min-h-screen relative">
         {/* Header */}
         <Header showBackButton title="My Events" />
 
         {/* Content */}
-        <div className="p-4">
+        <div className="p-4 lg:px-8">
           {isLoading ? (
-            <div className="space-y-4">
+            <div className="space-y-4 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0">
               {[...Array(3)].map((_, i) => (
                 <Card key={i} className="border-0 shadow-sm animate-pulse">
                   <CardContent className="p-4">
                     <div className="space-y-3">
                       <div className="flex items-center space-x-2">
-                        <div className="h-5 bg-gray-200 rounded w-16"></div>
-                        <div className="h-5 bg-gray-200 rounded w-12"></div>
+                        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+                        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
                       </div>
-                      <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-4 bg-gray-200 rounded w-full"></div>
+                      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
                       <div className="grid grid-cols-3 gap-4">
-                        <div className="h-4 bg-gray-200 rounded"></div>
-                        <div className="h-4 bg-gray-200 rounded"></div>
-                        <div className="h-4 bg-gray-200 rounded"></div>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
                       </div>
                     </div>
                   </CardContent>
@@ -86,7 +86,7 @@ export default function MyEvents() {
               ))}
             </div>
           ) : events && events.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-4 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0">
               {events.map((event) => (
                 <Card key={event.id} className="border-0 shadow-sm event-card cursor-pointer">
                   <CardContent className="p-4">

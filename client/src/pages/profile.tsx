@@ -28,13 +28,13 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-md mx-auto bg-white min-h-screen relative">
+    <div className="min-h-screen bg-gray-50 dark:bg-background">
+      <div className="max-w-md lg:max-w-4xl xl:max-w-6xl mx-auto bg-white dark:bg-background min-h-screen relative">
         {/* Header */}
         <Header showBackButton title="Profile" />
 
         {/* Profile Content */}
-        <div className="p-4 space-y-6">
+        <div className="p-4 lg:px-8 space-y-6">
           {/* Profile Info */}
           <Card className="border-0 shadow-sm">
             <CardContent className="p-6">
