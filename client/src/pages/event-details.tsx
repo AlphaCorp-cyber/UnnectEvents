@@ -278,7 +278,10 @@ export default function EventDetails() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Location</p>
-                    <p className="font-medium text-gray-900">{event.location}</p>
+                    {event.city && (
+                      <p className="font-medium text-gray-900 capitalize">{event.city}</p>
+                    )}
+                    <p className="text-sm text-gray-600">{event.location}</p>
                   </div>
                 </div>
 

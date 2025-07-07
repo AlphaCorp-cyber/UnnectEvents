@@ -42,6 +42,7 @@ export default function CreateEvent() {
       description: "",
       date: "",
       time: "",
+      city: "",
       location: "",
       category: "",
       days: 1,
@@ -216,7 +217,7 @@ export default function CreateEvent() {
                         <FormLabel>Description</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Describe your event..."
+                            placeholder="Describe your event and include the precise location details (e.g., building name, floor, room number)..."
                             className="min-h-[100px]"
                             {...field}
                           />
@@ -270,16 +271,49 @@ export default function CreateEvent() {
 
                   <FormField
                     control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center space-x-2">
+                          <MapPin className="w-4 h-4" />
+                          <span>City</span>
+                        </FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="py-3">
+                              <SelectValue placeholder="Select city" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="harare">Harare</SelectItem>
+                            <SelectItem value="bulawayo">Bulawayo</SelectItem>
+                            <SelectItem value="gweru">Gweru</SelectItem>
+                            <SelectItem value="mutare">Mutare</SelectItem>
+                            <SelectItem value="masvingo">Masvingo</SelectItem>
+                            <SelectItem value="chinhoyi">Chinhoyi</SelectItem>
+                            <SelectItem value="marondera">Marondera</SelectItem>
+                            <SelectItem value="kariba">Kariba</SelectItem>
+                            <SelectItem value="norton">Norton</SelectItem>
+                            <SelectItem value="ruwa">Ruwa</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="location"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center space-x-2">
                           <MapPin className="w-4 h-4" />
-                          <span>Location</span>
+                          <span>Precise Location</span>
                         </FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter event location"
+                            placeholder="e.g., 123 Main Street, Building Name, Room 5"
                             {...field}
                             className="py-3"
                           />

@@ -44,6 +44,7 @@ export const events = pgTable("events", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   date: timestamp("date").notNull(),
+  city: varchar("city", { length: 100 }).notNull(),
   location: varchar("location", { length: 255 }).notNull(),
   category: varchar("category", { length: 50 }).notNull(),
   days: integer("days").notNull().default(1),

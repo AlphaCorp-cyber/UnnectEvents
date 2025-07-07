@@ -146,7 +146,7 @@ export default function EventCard({ event, variant = "compact", onClick }: Event
             <Calendar className="w-3 h-3 mr-1" />
             <span>{format(new Date(event.date), "MMM dd, h:mm a")}</span>
             <MapPin className="w-3 h-3 ml-3 mr-1" />
-            <span>{event.location}</span>
+            <span>{event.city || event.location}</span>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center">
@@ -204,7 +204,7 @@ export default function EventCard({ event, variant = "compact", onClick }: Event
             <Calendar className="w-3 h-3 mr-1" />
             <span>{format(new Date(event.date), "MMM dd, h:mm a")}</span>
             <MapPin className="w-3 h-3 ml-3 mr-1" />
-            <span>{event.location}</span>
+            <span>{event.city || event.location}</span>
           </div>
         </div>
         <div className="flex flex-col items-end justify-between">
