@@ -120,6 +120,11 @@ Unnect Events is a modern web application for discovering and managing local eve
 ```
 Changelog:
 - July 07, 2025. Initial setup
+- July 07, 2025. Migration from Replit Agent to Replit environment completed
+  - Database migration and schema setup
+  - Dark mode styling fixes
+  - Admin user creation (admin@unnect.com)
+  - All core functionality verified and working
 ```
 
 ## User Preferences

@@ -30,8 +30,8 @@ export default function CategoryFilter({ selectedCategory, onCategoryChange }: C
             onClick={() => onCategoryChange(category.value)}
             className={`category-chip whitespace-nowrap ${
               selectedCategory === category.value
-                ? "bg-primary text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-primary text-primary-foreground"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
             {category.label}
