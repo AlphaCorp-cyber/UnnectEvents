@@ -1,0 +1,23 @@
+import { initializeApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider, FacebookAuthProvider } from "firebase/auth";
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebasestorage.app`,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+};
+
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+
+// Auth providers
+export const googleProvider = new GoogleAuthProvider();
+export const facebookProvider = new FacebookAuthProvider();
+
+// Configure providers
+googleProvider.addScope('email');
+googleProvider.addScope('profile');
+
+facebookProvider.addScope('email');

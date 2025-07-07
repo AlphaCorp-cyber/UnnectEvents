@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { CalendarDays, MapPin, Users, Zap, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { FaFacebook, FaGoogle } from "react-icons/fa";
+import { authService } from "@/lib/authService";
 
 export default function Landing() {
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
@@ -47,11 +48,16 @@ export default function Landing() {
     }
   };
 
-  const handleSocialAuth = (provider: "facebook" | "google") => {
-    if (provider === "google") {
-      window.location.href = "/api/auth/google";
-    } else if (provider === "facebook") {
-      window.location.href = "/api/auth/facebook";
+  const handleSocialAuth = async (provider: "facebook" | "google") => {
+    try {
+      if (provider === "google") {
+        await authService.signInWithGoogle();
+      } else if (provider === "facebook") {
+        await authService.signInWithFacebook();
+      }
+      // Redirect will happen automatically through authService
+    } catch (error) {
+      console.error("Social auth error:", error);
     }
   };
 
