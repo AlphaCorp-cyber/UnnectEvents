@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
 import { insertEventSchema, insertRsvpSchema, insertSavedEventSchema, insertAdminSettingSchema, insertPaymentSettingSchema } from "@shared/schema";
 import { z } from "zod";
+import bcrypt from "bcrypt";
 
 // Admin middleware
 const isAdmin = async (req: any, res: any, next: any) => {
@@ -247,7 +248,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Hash password
-      const bcrypt = require('bcrypt');
       const passwordHash = await bcrypt.hash(password, 10);
       
       // Create new admin user
