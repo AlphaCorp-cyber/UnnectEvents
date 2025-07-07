@@ -310,6 +310,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Listing packages routes
+  app.get('/api/listing-packages', async (req: any, res) => {
+    try {
+      const packages = await storage.getListingPackages();
+      res.json(packages);
+    } catch (error) {
+      console.error("Error fetching listing packages:", error);
+      res.status(500).json({ message: "Failed to fetch listing packages" });
+    }
+  });
+
+  // Calculate optimal pricing for given days
+  app.post('/api/calculate-price', async (req: any, res) => {
+    try {
+      const { days } = req.body;
+      
+      if (!days || days < 1) {
+        return res.status(400).json({ message: "Invalid number of days" });
+      }
+      
+      const pricing = await storage.calculateOptimalPrice(parseInt(days));
+      res.json(pricing);
+    } catch (error) {
+      console.error("Error calculating price:", error);
+      res.status(500).json({ message: "Failed to calculate price" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

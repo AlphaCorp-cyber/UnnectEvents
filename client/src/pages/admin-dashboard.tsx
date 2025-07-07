@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, DollarSign, Key, Shield } from "lucide-react";
+import { Settings, DollarSign, Key, Shield, Package, Plus, Edit3, Trash2, Calculator } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
+import PricingCalculator from "@/components/pricing-calculator";
 
 interface AdminSetting {
   id: number;
@@ -210,7 +211,7 @@ export default function AdminDashboard() {
         </div>
 
         <Tabs defaultValue="oauth" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="oauth" className="flex items-center gap-2">
               <Key className="w-4 h-4" />
               OAuth Settings
@@ -218,6 +219,10 @@ export default function AdminDashboard() {
             <TabsTrigger value="payment" className="flex items-center gap-2">
               <DollarSign className="w-4 h-4" />
               Payment Settings
+            </TabsTrigger>
+            <TabsTrigger value="packages" className="flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Pricing Packages
             </TabsTrigger>
           </TabsList>
 
@@ -393,6 +398,23 @@ export default function AdminDashboard() {
                 >
                   {isSavingPayment ? "Saving..." : "Save Payment Settings"}
                 </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="packages">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="w-5 h-5" />
+                  Listing Packages
+                </CardTitle>
+                <CardDescription>
+                  Manage flexible pricing packages for event listings with automatic cost optimization
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PricingCalculator />
               </CardContent>
             </Card>
           </TabsContent>

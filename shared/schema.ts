@@ -85,10 +85,21 @@ export const adminSettings = pgTable("admin_settings", {
 export const paymentSettings = pgTable("payment_settings", {
   id: serial("id").primaryKey(),
   isPaidVersion: boolean("is_paid_version").default(false),
-  eventPostingPrice: decimal("event_posting_price", { precision: 10, scale: 2 }).default("0"),
   paynowMerchantId: varchar("paynow_merchant_id", { length: 255 }),
   paynowIntegrationId: varchar("paynow_integration_id", { length: 255 }),
   paynowIntegrationKey: text("paynow_integration_key"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Listing packages table
+export const listingPackages = pgTable("listing_packages", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  duration: integer("duration").notNull(), // Duration in days
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  description: text("description"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -161,6 +172,12 @@ export const insertPaymentSettingSchema = createInsertSchema(paymentSettings).om
   updatedAt: true,
 });
 
+export const insertListingPackageSchema = createInsertSchema(listingPackages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
@@ -173,6 +190,8 @@ export type InsertAdminSetting = z.infer<typeof insertAdminSettingSchema>;
 export type AdminSetting = typeof adminSettings.$inferSelect;
 export type InsertPaymentSetting = z.infer<typeof insertPaymentSettingSchema>;
 export type PaymentSetting = typeof paymentSettings.$inferSelect;
+export type InsertListingPackage = z.infer<typeof insertListingPackageSchema>;
+export type ListingPackage = typeof listingPackages.$inferSelect;
 
 // Event with organizer and attendee count
 export type EventWithDetails = Event & {

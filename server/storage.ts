@@ -5,6 +5,7 @@ import {
   savedEvents,
   adminSettings,
   paymentSettings,
+  listingPackages,
   type User,
   type UpsertUser,
   type Event,
@@ -16,9 +17,11 @@ import {
   type InsertAdminSetting,
   type PaymentSetting,
   type InsertPaymentSetting,
+  type ListingPackage,
+  type InsertListingPackage,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, count } from "drizzle-orm";
+import { eq, desc, asc, sql, and, count } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -53,6 +56,13 @@ export interface IStorage {
   // Payment settings operations
   getPaymentSettings(): Promise<PaymentSetting | undefined>;
   updatePaymentSettings(settings: Partial<InsertPaymentSetting>): Promise<PaymentSetting>;
+
+  // Listing packages operations
+  getListingPackages(): Promise<ListingPackage[]>;
+  createListingPackage(packageData: InsertListingPackage): Promise<ListingPackage>;
+  updateListingPackage(id: number, packageData: Partial<InsertListingPackage>): Promise<ListingPackage>;
+  deleteListingPackage(id: number): Promise<void>;
+  calculateOptimalPrice(days: number): Promise<{ totalPrice: number; breakdown: Array<{ packageName: string; quantity: number; price: number }> }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -393,6 +403,68 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+
+  async getListingPackages(): Promise<ListingPackage[]> {
+    const packages = await db
+      .select()
+      .from(listingPackages)
+      .where(eq(listingPackages.isActive, true))
+      .orderBy(asc(listingPackages.duration));
+    return packages;
+  }
+
+  async createListingPackage(packageData: InsertListingPackage): Promise<ListingPackage> {
+    const [newPackage] = await db
+      .insert(listingPackages)
+      .values(packageData)
+      .returning();
+    return newPackage;
+  }
+
+  async updateListingPackage(id: number, packageData: Partial<InsertListingPackage>): Promise<ListingPackage> {
+    const [updatedPackage] = await db
+      .update(listingPackages)
+      .set(packageData)
+      .where(eq(listingPackages.id, id))
+      .returning();
+    return updatedPackage;
+  }
+
+  async deleteListingPackage(id: number): Promise<void> {
+    await db
+      .update(listingPackages)
+      .set({ isActive: false })
+      .where(eq(listingPackages.id, id));
+  }
+
+  async calculateOptimalPrice(days: number): Promise<{ totalPrice: number; breakdown: Array<{ packageName: string; quantity: number; price: number }> }> {
+    const packages = await this.getListingPackages();
+    
+    // Sort packages by duration in descending order for optimal calculation
+    const sortedPackages = packages.sort((a, b) => b.duration - a.duration);
+    
+    let remainingDays = days;
+    let totalPrice = 0;
+    const breakdown: Array<{ packageName: string; quantity: number; price: number }> = [];
+    
+    for (const pkg of sortedPackages) {
+      if (remainingDays <= 0) break;
+      
+      const quantity = Math.floor(remainingDays / pkg.duration);
+      if (quantity > 0) {
+        const packagePrice = parseFloat(pkg.price) * quantity;
+        totalPrice += packagePrice;
+        breakdown.push({
+          packageName: pkg.name,
+          quantity,
+          price: packagePrice
+        });
+        remainingDays -= quantity * pkg.duration;
+      }
+    }
+    
+    return { totalPrice, breakdown };
   }
 }
 
