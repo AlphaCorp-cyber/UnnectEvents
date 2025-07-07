@@ -20,7 +20,7 @@ export default function EventDetails() {
   const queryClient = useQueryClient();
 
   const { data: event, isLoading } = useQuery<EventWithDetails>({
-    queryKey: ["/api/events", id],
+    queryKey: [`/api/events/${id}`],
     onError: (error) => {
       if (isUnauthorizedError(error)) {
         toast({

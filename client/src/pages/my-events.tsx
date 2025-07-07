@@ -129,7 +129,7 @@ export default function MyEvents() {
                         </div>
                       </div>
 
-                      {/* Actions */}
+                      {/* Action Buttons */}
                       <div className="flex space-x-2 pt-2">
                         <Button
                           variant="outline"
